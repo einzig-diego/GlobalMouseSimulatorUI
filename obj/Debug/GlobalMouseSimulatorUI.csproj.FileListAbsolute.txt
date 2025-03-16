@@ -1,0 +1,7 @@
+C:\Users\diego\source\repos\DXInput\DXInput\obj\Debug\GlobalMouseSimulatorUI.csproj.AssemblyReference.cache
+C:\Users\diego\source\repos\DXInput\DXInput\obj\Debug\GlobalMouseSimulatorUI.csproj.CoreCompileInputs.cache
+C:\Users\diego\source\repos\DXInput\DXInput\bin\Debug\GlobalMouseSimulatorUI.exe.config
+C:\Users\diego\source\repos\DXInput\DXInput\bin\Debug\GlobalMouseSimulatorUI.exe
+C:\Users\diego\source\repos\DXInput\DXInput\bin\Debug\GlobalMouseSimulatorUI.pdb
+C:\Users\diego\source\repos\DXInput\DXInput\obj\Debug\GlobalMouseSimulatorUI.exe
+C:\Users\diego\source\repos\DXInput\DXInput\obj\Debug\GlobalMouseSimulatorUI.pdb

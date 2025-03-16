@@ -1,0 +1,7 @@
+C:\Users\diego\source\repos\DXInput\DXInput\bin\Debug\DXInput.exe.config
+C:\Users\diego\source\repos\DXInput\DXInput\bin\Debug\DXInput.exe
+C:\Users\diego\source\repos\DXInput\DXInput\bin\Debug\DXInput.pdb
+C:\Users\diego\source\repos\DXInput\DXInput\obj\Debug\DXInput.csproj.AssemblyReference.cache
+C:\Users\diego\source\repos\DXInput\DXInput\obj\Debug\DXInput.csproj.CoreCompileInputs.cache
+C:\Users\diego\source\repos\DXInput\DXInput\obj\Debug\DXInput.exe
+C:\Users\diego\source\repos\DXInput\DXInput\obj\Debug\DXInput.pdb
