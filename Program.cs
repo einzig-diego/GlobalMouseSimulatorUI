@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -45,7 +46,7 @@ namespace GlobalMouseSimulatorUI
     public partial class MainForm : Form
     {
         private Configuration config = new Configuration();
-        private Dictionary<Keys, DateTime> lastProcessed = new Dictionary<Keys, DateTime>();
+        private Dictionary<Keys, bool> keyStates = new Dictionary<Keys, bool>(); // Tracks the state of keys
 
         private CheckBox chkEnable;
         private Button btnLeft, btnRight, btnUp, btnDown, btnClickLeft, btnClickRight, btnSave;
@@ -55,6 +56,9 @@ namespace GlobalMouseSimulatorUI
         private Keys? remapTarget = null;
         private Thread keyPollingThread;
         private bool isPolling = false;
+
+        // High-resolution timer for smooth movement
+        private Stopwatch stopwatch = new Stopwatch();
 
         public MainForm()
         {
@@ -219,6 +223,7 @@ namespace GlobalMouseSimulatorUI
             if (keyPollingThread == null || !keyPollingThread.IsAlive)
             {
                 isPolling = true;
+                stopwatch.Start(); // Start the high-resolution timer
                 keyPollingThread = new Thread(PollKeys);
                 keyPollingThread.Start();
             }
@@ -230,6 +235,7 @@ namespace GlobalMouseSimulatorUI
         private void StopPolling()
         {
             isPolling = false;
+            stopwatch.Stop(); // Stop the high-resolution timer
             if (keyPollingThread != null && keyPollingThread.IsAlive)
             {
                 keyPollingThread.Join();
@@ -245,14 +251,52 @@ namespace GlobalMouseSimulatorUI
             {
                 if (config.IsEnabled)
                 {
-                    CheckKey(config.KeyLeft, () => MoveMouse(-config.MoveAmount, 0));
-                    CheckKey(config.KeyRight, () => MoveMouse(config.MoveAmount, 0));
-                    CheckKey(config.KeyUp, () => MoveMouse(0, -config.MoveAmount));
-                    CheckKey(config.KeyDown, () => MoveMouse(0, config.MoveAmount));
-                    CheckKey(config.KeyClickLeft, () => SimulateMouseClick(true));
-                    CheckKey(config.KeyClickRight, () => SimulateMouseClick(false));
+                    // Calculate the time elapsed since the last movement
+                    float deltaTime = stopwatch.ElapsedMilliseconds / 1000f; // Convert to seconds
+                    stopwatch.Restart(); // Restart the timer
+
+                    // Calculate smooth movement based on deltaTime
+                    int smoothMoveAmount = (int)(config.MoveAmount * deltaTime * 60); // Adjust for 60 FPS
+
+                    CheckKey(config.KeyLeft, () => MoveMouse(-smoothMoveAmount, 0));
+                    CheckKey(config.KeyRight, () => MoveMouse(smoothMoveAmount, 0));
+                    CheckKey(config.KeyUp, () => MoveMouse(0, -smoothMoveAmount));
+                    CheckKey(config.KeyDown, () => MoveMouse(0, smoothMoveAmount));
+
+                    // Handle mouse button hold for left and right click
+                    HandleMouseButtonHold(config.KeyClickLeft, true);  // Left click
+                    HandleMouseButtonHold(config.KeyClickRight, false); // Right click
                 }
                 Thread.Sleep(config.PollingInterval); // Use the configured polling interval
+            }
+        }
+
+        /// <summary>
+        /// Handles mouse button hold functionality.
+        /// </summary>
+        /// <param name="key">The key assigned to the mouse button.</param>
+        /// <param name="isLeftClick">True for left click, false for right click.</param>
+        private void HandleMouseButtonHold(Keys key, bool isLeftClick)
+        {
+            bool isKeyPressed = (GetAsyncKeyState((int)key) & 0x8000) != 0;
+
+            if (isKeyPressed)
+            {
+                if (!keyStates.ContainsKey(key) || !keyStates[key])
+                {
+                    // Key was just pressed, simulate mouse button down
+                    SimulateMouseClick(isLeftClick, true);
+                    keyStates[key] = true; // Mark key as pressed
+                }
+            }
+            else
+            {
+                if (keyStates.ContainsKey(key) && keyStates[key])
+                {
+                    // Key was just released, simulate mouse button up
+                    SimulateMouseClick(isLeftClick, false);
+                    keyStates[key] = false; // Mark key as released
+                }
             }
         }
 
@@ -390,22 +434,28 @@ namespace GlobalMouseSimulatorUI
         /// <summary>
         /// Simulates a mouse click (left or right).
         /// </summary>
-        private void SimulateMouseClick(bool isLeftClick)
+        /// <param name="isLeftClick">True for left click, false for right click.</param>
+        /// <param name="isDown">True for button down, false for button up.</param>
+        private void SimulateMouseClick(bool isLeftClick, bool isDown)
         {
-            INPUT[] inputs = new INPUT[2];
-            inputs[0].type = INPUT_MOUSE;
-            inputs[0].u.mi.mouseData = 0;
-            inputs[0].u.mi.dwFlags = isLeftClick ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_RIGHTDOWN;
-            inputs[0].u.mi.time = 0;
-            inputs[0].u.mi.dwExtraInfo = IntPtr.Zero;
+            INPUT input = new INPUT
+            {
+                type = INPUT_MOUSE,
+                u = new InputUnion
+                {
+                    mi = new MOUSEINPUT
+                    {
+                        mouseData = 0,
+                        dwFlags = isDown
+                            ? (isLeftClick ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_RIGHTDOWN)
+                            : (isLeftClick ? MOUSEEVENTF_LEFTUP : MOUSEEVENTF_RIGHTUP),
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
 
-            inputs[1].type = INPUT_MOUSE;
-            inputs[1].u.mi.mouseData = 0;
-            inputs[1].u.mi.dwFlags = isLeftClick ? MOUSEEVENTF_LEFTUP : MOUSEEVENTF_RIGHTUP;
-            inputs[1].u.mi.time = 0;
-            inputs[1].u.mi.dwExtraInfo = IntPtr.Zero;
-
-            SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
+            SendInput(1, new INPUT[] { input }, Marshal.SizeOf(typeof(INPUT)));
         }
 
         [DllImport("user32.dll", SetLastError = true)]
